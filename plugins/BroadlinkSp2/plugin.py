@@ -16,6 +16,7 @@
                 <option label="4" value="4"/>
                 <option label="5" value="5"/>
             </options>
+        </param>
         <param field="Mode6" label="Debug" width="75px">
             <options>
                 <option label="True" value="Debug"/>
