@@ -3,7 +3,7 @@
 # Using python library created by Matthew Garrett
 # https://github.com/mjg59/python-broadlink
 """
-<plugin key="BroadlinkA1" name="Broadlink A1" author="avgays" version="0.3.0" wikilink="http://www.domoticz.com/wiki/Developing_a_Python_plugin" externallink="http://www.ibroadlink.com/">
+<plugin key="BroadlinkA1" name="Broadlink A1" author="avgays" version="0.3.1" wikilink="http://www.domoticz.com/wiki/Developing_a_Python_plugin" externallink="http://www.ibroadlink.com/">
     <params>
         <param field="Address" label="IP Address" width="200px" required="true" default="192.168.0.24"/>
         <param field="Port" label="Port" width="30px" required="true" default="80"/>
@@ -30,37 +30,36 @@ import Domoticz
 import broadlink
 import socket
 
-_myA1 = 1
+
 myLight={0:'Dark',1:'Dim',2:'Normal',3:'Bright'}
 myNoise={0:'Quiet',1:'Normal', 2:'Noisy',3:'Very noisy'}
 myAir={0:'Excellent',1:'Good', 2:'Normal',3:'Bad'}
-#_myStatus = ''
+
 
 class BasePlugin:
+    myA1 = 1
+    delay = 1
+    isFound = False
+    isConnected = False
+    downcount = 0
     
     def __init__(self):
         return
 
     def onStart(self):
-        global _myA1
-        
         if Parameters["Mode6"] == "Debug":
             Domoticz.Debugging(1)
+        self.delay = int(Parameters["Mode2"])
         if (len(Devices) == 0):
             Domoticz.Device(Name="A1", Unit=1, TypeName="Temp+Hum").Create()
             Domoticz.Device(Name="Sound", Unit=2, TypeName="Text").Create()
             Domoticz.Device(Name="Air", Unit=3, TypeName="Text").Create()
             Domoticz.Device(Name="Light", Unit=4, TypeName="Text").Create()
-            
             Domoticz.Log("Devices A1 created.")
             
-        _myA1=broadlink.a1(host=(Parameters["Address"], int(Parameters["Port"])), mac=bytearray.fromhex(Parameters["Mode1"]))
-        _myA1.auth()
+        self.myA1=broadlink.a1(host=(Parameters["Address"], int(Parameters["Port"])), mac=bytearray.fromhex(Parameters["Mode1"]))
+        self.myA1.auth()
         
-        #_myStatus =_mySP2.check_power()
-        #Domoticz.Debug(str(_myStatus))
-        
-        #UpdateDevice(1, _myA1.check_power(), "")
         Domoticz.Heartbeat(60)
         Domoticz.Debug("onStart called")
 
@@ -74,7 +73,6 @@ class BasePlugin:
         Domoticz.Log("onMessage called")
 
     def onCommand(self, Unit, Command, Level, Hue):
-        
         Domoticz.Debug("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level)+ "', Hue: " + str(Hue))
 
     def onNotification(self, Data):
@@ -84,8 +82,7 @@ class BasePlugin:
         Domoticz.Log("onDisconnect called")
 
     def onHeartbeat(self):
-        
-        result=_myA1.check_sensors_raw()
+        result=self.myA1.check_sensors_raw()
         temperature = result['temperature']
         humidity = result['humidity']
         noise = result['noise']
@@ -106,13 +103,6 @@ class BasePlugin:
         UpdateDevice(4, 1, str(myLight[light]))
         
         Domoticz.Debug("result temp: " + str(temperature) + ", Hym: " + str(humidity) + ", noise: " + str(noise) + "', light: " + str(light) + ", air_quality: " + str(air_quality) + ", hum_stat: " + str(hum_stat))
-
-        #try:
-        #    power=_mySP2.check_power()
-        #    UpdateDevice(1, power, "")
-        #except Exception:
-        #    Domoticz.Error("Some errors")
-        #Domoticz.Debug("Power: " + str(int(_myStatus))+ " " + str(nValue))
         Domoticz.Debug("onHeartbeat called")
 
 global _plugin
