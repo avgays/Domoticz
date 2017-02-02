@@ -1,14 +1,21 @@
 # Broadlink SP2 mini
-#
-# Author: avg
-#
+# Author: avgays
+# Using python library created by Matthew Garrett
+# https://github.com/mjg59/python-broadlink
 """
-<plugin key="BroadlinkSP2" name="Broadlink SP2 mini" author="avgays" version="1.0.0" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="http://www.ibroadlink.com/">
+<plugin key="BroadlinkSP2" name="Broadlink SP2 mini" author="avgays" version="1.0.0" wikilink="http://www.domoticz.com/wiki/Developing_a_Python_plugin" externallink="http://www.ibroadlink.com/">
     <params>
         <param field="Address" label="IP Address" width="200px" required="true" default="192.168.0.22"/>
         <param field="Port" label="Port" width="30px" required="true" default="80"/>
         <param field="Mode1" label="MAC Address" width="150px" required="true" default="b4430d96fa54"/>
-        <param field="Mode2" label="Reconect delay, minutes" width="150px" required="false" default="3"/>
+        <param field="Mode2" label="Reconect Delay, minutes" width="30px" required="true">
+            <options>
+                <option label="1" value="1"/>
+                <option label="2" value="2" default="true"/>
+                <option label="3" value="3"/>
+                <option label="4" value="4"/>
+                <option label="5" value="5"/>
+            </options>
         <param field="Mode6" label="Debug" width="75px">
             <options>
                 <option label="True" value="Debug"/>
