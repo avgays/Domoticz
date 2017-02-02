@@ -1,13 +1,22 @@
 # Broadlink A1 mini
-#
-# Author: avg
-#
+# Author: avgays
+# Using python library created by Matthew Garrett
+# https://github.com/mjg59/python-broadlink
 """
-<plugin key="BroadlinkA1" name="Broadlink A1" author="avgays" version="1.0.0" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="http://www.ibroadlink.com/">
+<plugin key="BroadlinkA1" name="Broadlink A1" author="avgays" version="0.3.0" wikilink="http://www.domoticz.com/wiki/Developing_a_Python_plugin" externallink="http://www.ibroadlink.com/">
     <params>
         <param field="Address" label="IP Address" width="200px" required="true" default="192.168.0.24"/>
         <param field="Port" label="Port" width="30px" required="true" default="80"/>
         <param field="Mode1" label="MAC Address" width="150px" required="true" default="b4430d704be6"/>
+        <param field="Mode2" label="Reconect Delay, minutes" width="30px" required="true">
+            <options>
+                <option label="1" value="1"/>
+                <option label="2" value="2" default="true"/>
+                <option label="3" value="3"/>
+                <option label="4" value="4"/>
+                <option label="5" value="5"/>
+            </options>
+        </param>
         <param field="Mode6" label="Debug" width="75px">
             <options>
                 <option label="True" value="Debug"/>
@@ -19,17 +28,17 @@
 """
 import Domoticz
 import broadlink
+import socket
 
 _myA1 = 1
-myLight={0:'dark',1:'dim',2:'normal',3:'bright'}
-myNoise={0:'quiet',1:'normal', 2:'noisy',3:'Very noisy'}
-myAir={0:'excellent',1:'good', 2:'normal',3:'bad'}
+myLight={0:'Dark',1:'Dim',2:'Normal',3:'Bright'}
+myNoise={0:'Quiet',1:'Normal', 2:'Noisy',3:'Very noisy'}
+myAir={0:'Excellent',1:'Good', 2:'Normal',3:'Bad'}
 #_myStatus = ''
 
 class BasePlugin:
-    enabled = False
+    
     def __init__(self):
-        #self.var = 123
         return
 
     def onStart(self):
