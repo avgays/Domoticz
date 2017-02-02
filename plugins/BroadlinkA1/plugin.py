@@ -58,10 +58,19 @@ class BasePlugin:
             Domoticz.Log("Devices A1 created.")
             
         self.myA1=broadlink.a1(host=(Parameters["Address"], int(Parameters["Port"])), mac=bytearray.fromhex(Parameters["Mode1"]))
-        self.myA1.auth()
-        
+        try:
+            self.isFound = self.myA1.auth()
+            self.isConnected = True
+        except socket.timeout:
+            self.isConnected = False
+            self.isFound = False
+        if (isConnected):
+            Domoticz.Debug("onStart called. isConnected: " + str(self.isConnected) + " isFound: " + str(self.isFound))
+        else:
+            Domoticz.Error("Devices A1 at "+ Parameters["Address"] +" not found")
         Domoticz.Heartbeat(60)
         Domoticz.Debug("onStart called")
+        Domoticz.Debug("Delay is set " + str(self.delay) + " minutes")
 
     def onStop(self):
         Domoticz.Log("onStop called")
