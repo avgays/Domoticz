@@ -3,7 +3,7 @@
 # Using python library created by Matthew Garrett
 # https://github.com/mjg59/python-broadlink
 """
-<plugin key="BroadlinkA1" name="Broadlink A1" author="avgays" version="0.3.1" wikilink="http://www.domoticz.com/wiki/Developing_a_Python_plugin" externallink="http://www.ibroadlink.com/">
+<plugin key="BroadlinkRM" name="Broadlink RM" author="avgays" version="0.1.0" wikilink="http://www.domoticz.com/wiki/Developing_a_Python_plugin" externallink="http://www.ibroadlink.com/">
     <params>
         <param field="Address" label="IP Address" width="200px" required="true" default="192.168.0.14"/>
         <param field="Port" label="Port" width="30px" required="true" default="80"/>
