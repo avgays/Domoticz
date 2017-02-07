@@ -65,7 +65,7 @@ class BasePlugin:
         if(self.isFound): 
             try:
                 temperature=self.myRM.check_temperature()
-                UpdateDevice(1, 1, str(temperature),100,100)
+                UpdateDevice(1, 1, str(temperature))
                 Domoticz.Debug("Temp: " + str(temperature))
             except socket.timeout:
                 Domoticz.Debug("RM Timeout")
@@ -131,6 +131,7 @@ def UpdateDevice(Unit, nValue, sValue):
     # Make sure that the Domoticz device still exists (they can be deleted) before updating it 
     if (Unit in Devices):
         if (Devices[Unit].nValue != nValue) or (Devices[Unit].sValue != sValue):
-            Devices[Unit].Update(nValue, str(sValue))
+            Devices[Unit].Update(nValue=nValue, sValue=str(sValue), SignalLevel=100, BatteryLevel=255)
+            #Devices[Unit].Update(nValue, str(sValue))
             Domoticz.Debug("Update "+str(nValue)+":'"+str(sValue)+"' ("+Devices[Unit].Name+")")
     return
