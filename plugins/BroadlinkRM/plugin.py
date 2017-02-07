@@ -32,7 +32,6 @@ class BasePlugin:
     def onStart(self):
         if Parameters["Mode6"] == "Debug":
             Domoticz.Debugging(1)
-        self.delay = int(Parameters["Mode2"])
         if (len(Devices) == 0):
             Domoticz.Device(Name="Temp", Unit=1, TypeName="Temperature").Create()
         self.myRM=broadlink.a1(host=(Parameters["Address"], int(Parameters["Port"])), mac=bytearray.fromhex(Parameters["Mode1"]))
