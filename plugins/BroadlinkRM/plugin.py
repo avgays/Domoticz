@@ -34,7 +34,7 @@ class BasePlugin:
             Domoticz.Debugging(1)
         if (len(Devices) == 0):
             Domoticz.Device(Name="Temp", Unit=1, TypeName="Temperature").Create()
-        self.myRM=broadlink.a1(host=(Parameters["Address"], int(Parameters["Port"])), mac=bytearray.fromhex(Parameters["Mode1"]))
+        self.myRM=broadlink.rm(host=(Parameters["Address"], int(Parameters["Port"])), mac=bytearray.fromhex(Parameters["Mode1"]))
         try:
             self.isFound = self.myRM.auth()
         except socket.timeout:
