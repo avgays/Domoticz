@@ -132,6 +132,5 @@ def UpdateDevice(Unit, nValue, sValue):
     if (Unit in Devices):
         if (Devices[Unit].nValue != nValue) or (Devices[Unit].sValue != sValue):
             Devices[Unit].Update(nValue=nValue, sValue=str(sValue), SignalLevel=100, BatteryLevel=255)
-            #Devices[Unit].Update(nValue, str(sValue))
-            Domoticz.Debug("Update "+str(nValue)+":'"+str(sValue)+"' ("+Devices[Unit].Name+")")
+            Domoticz.Log("Update "+str(nValue)+":'"+str(sValue)+"' ("+Devices[Unit].Name+")")
     return
