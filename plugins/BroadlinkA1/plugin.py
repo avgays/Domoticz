@@ -1,22 +1,13 @@
-# Broadlink A1 mini
+# Broadlink A1
 # Author: avgays
 # Using python library created by Matthew Garrett
 # https://github.com/mjg59/python-broadlink
 """
-<plugin key="BroadlinkA1" name="Broadlink A1" author="avgays" version="0.3.1" wikilink="http://www.domoticz.com/wiki/Developing_a_Python_plugin" externallink="http://www.ibroadlink.com/">
+<plugin key="BroadlinkA1" name="Broadlink A1" author="avgays" version="0.3.2" wikilink="http://www.domoticz.com/wiki/Developing_a_Python_plugin" externallink="http://www.ibroadlink.com/">
     <params>
         <param field="Address" label="IP Address" width="200px" required="true" default="192.168.0.24"/>
         <param field="Port" label="Port" width="30px" required="true" default="80"/>
         <param field="Mode1" label="MAC Address" width="150px" required="true" default="b4430d704be6"/>
-        <param field="Mode2" label="Reconect Delay, minutes" width="30px" required="true">
-            <options>
-                <option label="1" value="1"/>
-                <option label="2" value="2" default="true"/>
-                <option label="3" value="3"/>
-                <option label="4" value="4"/>
-                <option label="5" value="5"/>
-            </options>
-        </param>
         <param field="Mode6" label="Debug" width="75px">
             <options>
                 <option label="True" value="Debug"/>
@@ -31,16 +22,13 @@ import broadlink
 import socket
 
 
-myLight={0:'Dark',1:'Dim',2:'Normal',3:'Bright'}
-myNoise={0:'Quiet',1:'Normal', 2:'Noisy',3:'Very noisy'}
-myAir={0:'Excellent',1:'Good', 2:'Normal',3:'Bad'}
-
+myLight={0:(0,'Dark'),1:(1,'Dim'),2:(2,'Normal'),3:(3,'Bright')}
+myNoise={0:(1,'Quiet'),1:(1,'Normal'), 2:(2,'Noisy'),3:(4,'Very noisy')}
+myAir={0:(1,'Excellent'),1:(1,'Good'), 2:(2,'Normal'),3:(3,'Bad')}
 
 class BasePlugin:
     myA1 = 1
-    delay = 1
     isFound = False
-    isConnected = False
     downcount = 0
     
     def __init__(self):
@@ -49,28 +37,20 @@ class BasePlugin:
     def onStart(self):
         if Parameters["Mode6"] == "Debug":
             Domoticz.Debugging(1)
-        self.delay = int(Parameters["Mode2"])
         if (len(Devices) == 0):
             Domoticz.Device(Name="A1", Unit=1, TypeName="Temp+Hum").Create()
-            Domoticz.Device(Name="Sound", Unit=2, TypeName="Text").Create()
-            Domoticz.Device(Name="Air", Unit=3, TypeName="Text").Create()
-            Domoticz.Device(Name="Light", Unit=4, TypeName="Text").Create()
-            Domoticz.Log("Devices A1 created.")
+            Domoticz.Device(Name="Sound", Unit=2, TypeName="Alert").Create()
+            Domoticz.Device(Name="Air", Unit=3, TypeName="Alert").Create()
+            Domoticz.Device(Name="Light", Unit=4, TypeName="Alert").Create()
             
         self.myA1=broadlink.a1(host=(Parameters["Address"], int(Parameters["Port"])), mac=bytearray.fromhex(Parameters["Mode1"]))
         try:
             self.isFound = self.myA1.auth()
-            self.isConnected = True
         except socket.timeout:
-            self.isConnected = False
             self.isFound = False
-        if (isConnected):
-            Domoticz.Debug("onStart called. isConnected: " + str(self.isConnected) + " isFound: " + str(self.isFound))
-        else:
-            Domoticz.Error("Devices A1 at "+ Parameters["Address"] +" not found")
+            Domoticz.Error("A1 not found")
         Domoticz.Heartbeat(60)
         Domoticz.Debug("onStart called")
-        Domoticz.Debug("Delay is set " + str(self.delay) + " minutes")
 
     def onStop(self):
         Domoticz.Log("onStop called")
@@ -91,29 +71,30 @@ class BasePlugin:
         Domoticz.Log("onDisconnect called")
 
     def onHeartbeat(self):
-        result=self.myA1.check_sensors_raw()
-        temperature = result['temperature']
-        humidity = result['humidity']
-        noise = result['noise']
-        light = result['light']
-        air_quality = result['air_quality']
-        hum_stat=77
-        if (humidity<30):
-            hum_stat=2
-        elif (humidity>=30 and humidity<=45):
-            hum_stat=0
-        elif (humidity>=45 and humidity<=70):
-            hum_stat=1
-        else:
+        if(self.isFound):
+            result=self.myA1.check_sensors_raw()
+            temperature = result['temperature']
+            humidity = result['humidity']
+            noise = result['noise']
+            light = result['light']
+            air_quality = result['air_quality']
             hum_stat=3
-        UpdateDevice(1, 1, str(temperature) + ";" + str(humidity)+ ";"+ str(hum_stat))
-        UpdateDevice(2, 1, str(myNoise[noise]))
-        UpdateDevice(3, 1, str(myAir[noise]))
-        UpdateDevice(4, 1, str(myLight[light]))
-        
-        Domoticz.Debug("result temp: " + str(temperature) + ", Hym: " + str(humidity) + ", noise: " + str(noise) + "', light: " + str(light) + ", air_quality: " + str(air_quality) + ", hum_stat: " + str(hum_stat))
+            if (humidity<30): hum_stat=2
+            elif (humidity>=30 and humidity<=45): hum_stat=0
+            elif (humidity>=45 and humidity<=70): hum_stat=1
+            UpdateDevice(1, 1, str(temperature) + ";" + str(humidity)+ ";"+ str(hum_stat))
+            UpdateDevice(2, int(myNoise[noise][0]), str(myNoise[noise][1]))
+            UpdateDevice(3, int(myAir[noise][0]), str(myAir[noise][1]))
+            UpdateDevice(4, int(myLight[light][0]), str(myLight[light][1]))
+            Domoticz.Debug("result temp: " + str(temperature) + ", Hym: " + str(humidity) + ", noise: " + str(noise) + "', light: " + str(light) + ", air_quality: " + str(air_quality) + ", hum_stat: " + str(hum_stat))
+        else:
+            try:
+                self.isFound = self.myRM.auth()
+            except socket.timeout:
+                self.isFound = False
+                Domoticz.Error("A1 not found")
         Domoticz.Debug("onHeartbeat called")
-
+        
 global _plugin
 _plugin = BasePlugin()
 
@@ -168,6 +149,6 @@ def UpdateDevice(Unit, nValue, sValue):
     # Make sure that the Domoticz device still exists (they can be deleted) before updating it 
     if (Unit in Devices):
         if (Devices[Unit].nValue != nValue) or (Devices[Unit].sValue != sValue):
-            Devices[Unit].Update(nValue, str(sValue))
-            Domoticz.Debug("Update "+str(nValue)+":'"+str(sValue)+"' ("+Devices[Unit].Name+")")
+            Devices[Unit].Update(nValue=nValue, sValue=str(sValue), SignalLevel=100, BatteryLevel=255)
+            Domoticz.Log("Update "+str(nValue)+":'"+str(sValue)+"' ("+Devices[Unit].Name+")")
     return
