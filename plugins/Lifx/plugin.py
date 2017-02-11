@@ -2,7 +2,7 @@
 # Uses lightsd, a daemon to control smart bulbs by lopter: https://github.com/lopter/lightsd/
 #
 """
-<plugin key="Lifx" name="Lifx Plugin" author="avgays" version="1.1.0" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://www.lifx.com/">
+<plugin key="Lifx" name="Lifx Plugin" author="avgays" version="1.2.1" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://www.lifx.com/">
     <params>
         <param field="Address" label="IP Address" width="200px" required="true" default="127.0.0.1"/>
         <param field="Port" label="Port" width="50px" required="true" default="32069"/>
