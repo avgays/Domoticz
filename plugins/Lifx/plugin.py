@@ -2,11 +2,11 @@
 # Uses lightsd, a daemon to control smart bulbs by lopter: https://github.com/lopter/lightsd/
 #
 """
-<plugin key="Lifx" name="Lifx Plugin" author="avgays" version="1.2.1" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://www.lifx.com/">
+<plugin key="Lifx" name="Lifx Plugin" author="avgays" version="1.2.2" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://www.lifx.com/">
     <params>
         <param field="Address" label="IP Address" width="200px" required="true" default="127.0.0.1"/>
         <param field="Port" label="Port" width="50px" required="true" default="32069"/>
-        <param field="Mode3" label="Unix Socket" width="200px" required="true" default="/var/run/lightsd//socket"/>
+        <param field="Mode3" label="Unix Socket" width="200px" required="true" default="/run/lightsd/socket"/>
         <param field="Mode4" label="Socket Type" width="75px" required="true">
             <options>
                 <option label="UNIX" value="UNIX" default="true" />
@@ -70,8 +70,6 @@ class BasePlugin:
             self.mydevices={}
         self.inv_mydevices = {v: k for k, v in self.mydevices.items()}
         
-        #Domoticz.Device(Name="myName",  Unit=2, Type=244, Subtype=73, Switchtype=7).Create()
-        #Domoticz.Device(Name="myName1",  Unit=5, Type=244, Subtype=73, Switchtype=7).Create()
         if Parameters["Mode5"] == "Rescan":
             for Device in list(self.mydevices.keys()):
                 Domoticz.Debug(Device + ":"+ self.mydevices[Device])
@@ -99,7 +97,7 @@ class BasePlugin:
                 try:
                     Unit=int(self.inv_mydevices[MACADDR])
                     UpdateDevice(Unit, myPower, myLevel)
-                    Domoticz.Debug("Devices exist. " + str(k))
+                    Domoticz.Debug("Devices exist. " + str(Unit))
                 except Exception:
                     k+=1
                     Domoticz.Device(Name=myName,  Unit=(k), Type=myType, Subtype=mySType, Switchtype=7).Create()
