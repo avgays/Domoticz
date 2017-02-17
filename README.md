@@ -1,7 +1,7 @@
 # Domoticz
 Domoticz python Plugins
 
-LIFX
+## LIFX
 
 The lights daemon documentation: 
 
