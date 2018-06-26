@@ -2,7 +2,7 @@
 # Uses lightsd, a daemon to control smart bulbs by lopter: https://github.com/lopter/lightsd/
 #
 """
-<plugin key="Lifx" name="Lifx Plugin" author="avgays" version="1.2.2" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://www.lifx.com/">
+<plugin key="Lifx2" name="Lifx Plugin 2" author="avgays" version="2.0" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://www.lifx.com/">
     <params>
         <param field="Address" label="IP Address" width="200px" required="true" default="127.0.0.1"/>
         <param field="Port" label="Port" width="50px" required="true" default="32069"/>
@@ -33,10 +33,11 @@ import json
 import base64
 import socket
 import random
+import math
 
 READ_SIZE = 4096
 ENCODING = "utf-8"
-#devtypes={"Original 1000":(244,73),"White 800":(244,73),"LIFX Z":(244,73)}
+devtypes={"Original 1000":(241,4,7),"White 800":(241,3,7),"LIFX Z":(241,4,7),"Color 1000":(241,4,7),"Unknown":(241,4,7)}
 
 class BasePlugin:
     lightsd_socket=""
@@ -84,23 +85,26 @@ class BasePlugin:
             Domoticz.Debug("Devices " + str(self.mydevices))
             Domoticz.Debug("Devices " + str(k))
             for i in range(len(myResult)):
+                Domoticz.Debug("LIFX: " + str(myResult[i]["hsbk"]))
                 myName = "Lamp"
                 myPower=1
                 myLevel=100
-                myType=244
-                mySType=73
-                myPower=1 if (myResult[i]["power"]) else 0
+                myModel = myResult[i]["_model"]
+                myType = devtypes[myModel][0] #myType=244
+                mySType=devtypes[myModel][1] #mySType=73
+                mySwitchtype=devtypes[myModel][2] #7
+                myPower=10 if (myResult[i]["power"]) else 0
                 myLevel=str(int(myResult[i]["hsbk"][2]*100))
                 MACADDR=str(myResult[i]["_lifx"]["addr"].replace(":",""))
-                #myName = str(myResult[i]["Label"])
-                myName = str(myResult[i]["_model"])
+                myName = str(myResult[i]["label"])
+                #myName = str(myResult[i]["_model"])
                 try:
                     Unit=int(self.inv_mydevices[MACADDR])
                     UpdateDevice(Unit, myPower, myLevel)
                     Domoticz.Debug("Devices exist. " + str(Unit))
                 except Exception:
                     k+=1
-                    Domoticz.Device(Name=myName,  Unit=(k), Type=myType, Subtype=mySType, Switchtype=7).Create()
+                    Domoticz.Device(Name=myName,  Unit=(k), Type=myType, Subtype=mySType, Switchtype=mySwitchtype).Create()
                     self.mydevices[str(k)]=MACADDR
                     Domoticz.Debug("Devices created. " + str(k))    
                     UpdateDevice(k, myPower, myLevel)
@@ -119,11 +123,12 @@ class BasePlugin:
     def onMessage(self, Data, Status, Extra):
         Domoticz.Debug("onMessage called:")
 
-    def onCommand(self, Unit, Command, Level, Hue):
+    def onCommand(self, Unit, Command, Level, Color):
         MACADDR=self.mydevices[str(Unit)]
+        Domoticz.Debug("onCommand called for Lifx #" + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level) + ", Color: " + str(Color))
         if (Command == 'On'):
             setLIFX("power_on", [MACADDR])
-            UpdateDevice(Unit, 1, Devices[Unit].sValue)
+            UpdateDevice(Unit, 10, Devices[Unit].sValue)
         elif (Command == 'Off'):
             setLIFX("power_off", [MACADDR])
             UpdateDevice(Unit, 0, Devices[Unit].sValue)
@@ -132,10 +137,29 @@ class BasePlugin:
             h, s, b, k = myResult[0]["hsbk"]
             b=Level/100
             setLIFX("set_light_from_hsbk", [MACADDR, h,s,b,k,0])
-            setLIFX("power_on", [MACADDR])
-            UpdateDevice(Unit, 2, str(Level))
-        Domoticz.Debug("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level))
-
+            UpdateDevice(Unit, 15, str(Level))
+        elif (Command == 'Set Color'):
+            myResult = queryLIFX(Params=MACADDR)
+            h, s, b, k = myResult[0]["hsbk"]
+            ColorJ=json.loads(Color)
+            Domoticz.Debug("Get Color HSB Lifx #" + str(Unit) + ">>"  + str(h) + ":"+ str(s) + ":"+ str(b)+ ":"+ str(k))
+            red=ColorJ["r"]/255
+            green=ColorJ["g"]/255
+            blue=ColorJ["b"]/255
+            mmode=ColorJ["m"]
+            t=ColorJ["t"]
+            v=0
+            if (mmode==2): # set temp
+                h=0
+                s=0
+                v=Level/100
+                k=translate(t,255,0,2500,9000)
+            elif (mmode==3): # set color
+                h, s, v = rgb_to_hsv(red, green, blue)
+            setLIFX("set_light_from_hsbk", [MACADDR, h,s,b,k,0])
+            UpdateDevice2(Unit, 15, str(Level), str(Color))          
+            Domoticz.Debug("Set Color RGB Lifx #" + str(Unit) + ">>" + str(red) + ":"+ str(green) + ":"+ str(blue) + " mode:" + str(mmode)+ " temp:" + str(t))
+            Domoticz.Debug("Set Color HSB Lifx #" + str(Unit) + ">>"  + str(h) + ":"+ str(s) + ":"+ str(v) + ":"+ str(k))
     def onNotification(self, Data):
         Domoticz.Debug("onNotification: " + str(Data))
 
@@ -145,14 +169,24 @@ class BasePlugin:
     def onHeartbeat(self):
         if(self.HBpass==0):
             myResult = queryLIFX()
+            ColorStr='';
             for i in range(len(myResult)):
-                myLevel=str(int(myResult[i]["hsbk"][2]*100))
                 MACADDR=str(myResult[i]["_lifx"]["addr"].replace(":",""))
-                myPower=1 if (myResult[i]["power"]) else 0
+                myPower=10 if (myResult[i]["power"]) else 0
+                h, s, b, k = myResult[i]["hsbk"]
+                myLevel=str(int(b*100))
+                if (s==0):
+                    t = translate(k,2500,9000,255,0)
+                    ColorStr='{"m":2,"r":0,"g":0,"b":0,"t":'+ str(t) +',"ww":0,"cw":0}'
+                else:
+                    red, green, blue = hsv_to_rgb(h, s, 1)
+                    ColorStr='{"m":3,"r":' + str(red) + ',"g":' + str(green) + ',"b":' + str(blue) + ',"t":0,"cw":0,"ww":0}'
                 try:
                     myDevice=int(self.inv_mydevices[MACADDR])
-                    UpdateDevice(myDevice, myPower, myLevel)
-                    Domoticz.Debug("Lifx #" + str(myDevice) + " power " + str(myPower) + " Level " + str(myLevel))
+                    UpdateDevice2(myDevice, myPower, myLevel, ColorStr)
+                    Domoticz.Debug(">>Lifx #" + str(myDevice) + " ColorStr " + ColorStr)
+                    Domoticz.Debug(">>Lifx #" + str(myDevice) + " power " + str(myPower) + " Level " + str(myLevel))
+                    Domoticz.Debug(">>Lifx #" + str(myDevice) + " hsbk " + str(myResult[i]["hsbk"]))
                 except KeyError:
                     Domoticz.Debug("Unknown LIFX device found")
             self.HBpass=4
@@ -217,6 +251,15 @@ def UpdateDevice(Unit, nValue, sValue):
             Domoticz.Debug("Update "+str(nValue)+":'"+str(sValue)+"' ("+Devices[Unit].Name+")")
     return
 
+def UpdateDevice2(Unit, nValue, sValue, Color):
+    # Make sure that the Domoticz device still exists (they can be deleted) before updating it 
+    if (Unit in Devices):
+        Domoticz.Debug (">>>>>>>>>>Color: " + "' ("+Devices[Unit].Name+") " + Devices[Unit].Color)
+        if (Devices[Unit].nValue != nValue) or (Devices[Unit].sValue != sValue):
+            Devices[Unit].Update(nValue=nValue, sValue=str(sValue), Color=Color)
+            Domoticz.Debug("LIFX Update "+str(nValue)+":'"+str(sValue)+"' ("+Devices[Unit].Name+")" + " Color " + Color)
+    return
+
 def stringToBase64(s):
     return base64.b64encode(s.encode('utf-8')).decode("utf-8")
 
@@ -236,5 +279,42 @@ def queryLIFX(Command="get_light_state", Params="*"):
     
 def setLIFX(Command, Params=["*"]):
     request = json.dumps({"method": Command, "params": Params, "jsonrpc": "2.0",}).encode(ENCODING, "surrogateescape")
+    Domoticz.Debug("request: " + str(request))
     _plugin.lightsd_socket.sendall(request) 
     return
+
+def rgb_to_hsv(r, g, b):
+    r = float(r)
+    g = float(g)
+    b = float(b)
+    high = max(r, g, b)
+    low = min(r, g, b)
+    h, s, v = high, high, high
+    d = high - low
+    s = 0 if high == 0 else d/high
+    if high == low:
+        h = 0.0
+    else:
+        h = {r: (g - b) / d + (6 if g < b else 0), g: (b - r) / d + 2, b: (r - g) / d + 4,}[high]
+        h /= 6
+    h = int (h*360)
+    return h, s, v
+
+def hsv_to_rgb(h, s, v):
+    h /= 360
+    i = math.floor(h*6)
+    f = h*6 - i
+    p = v * (1-s)
+    q = v * (1-f*s)
+    t = v * (1-(1-f)*s)
+    r, g, b = [(v, t, p),(q, v, p),(p, v, t),(p, q, v),(t, p, v),(v, p, q),][int(i%6)]
+    r *=255
+    g *=255
+    b *=255
+    return int(r), int(g), int(b)
+
+def translate(value, leftMin, leftMax, rightMin, rightMax):
+    leftSpan = leftMax - leftMin
+    rightSpan = rightMax - rightMin
+    valueScaled = float(value - leftMin) / float(leftSpan)
+    return int(rightMin + (valueScaled * rightSpan))
