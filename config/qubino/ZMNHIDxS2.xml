@@ -24,7 +24,7 @@ ref: http://qubino.com/download/1061/
 	</CommandClass>
 
     <!-- This thermostat's setpoint descriptions are 0 based, not 1 -->
-    <CommandClass id="67"  base="0" override_precision="2"  />
+    <CommandClass id="67"  base="0" override_precision="1"  />
     
     <!-- Configuration -->
     <CommandClass id="112">
@@ -76,7 +76,7 @@ ref: http://qubino.com/download/1061/
         </Value>
         <Value type="short" genre="config" instance="1" index="12" label="Set point set by I2" size="2" min="0" max="65535" value="32767">
             <Help>
-                When I3 is pressed set point will be set according to the value of this parameter.
+                When I2 is pressed set point will be set according to the value of this parameter.
                 Default value 32767.
                 32767 - input I2 does not influence on the set point
                 From 0 to 990 - set point from 0.0 C to 99.0 C
