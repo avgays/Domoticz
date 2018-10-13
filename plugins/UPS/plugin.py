@@ -127,7 +127,7 @@ class BasePlugin:
         self.voltage = self.readVoltage()
         self.percent = self.readCapacity()
         self.UpdatePercent(1, self.percent)
-        Devices[2].Update(nValue=0, sValue=str(self.voltage))
+        Devices[2].Update(nValue=0, sValue=str(self.voltage), BatteryLevel = int(self.percent))
     
     def readVoltage(self):
         read = self.bus.read_word_data(self.address, 2)
@@ -155,7 +155,7 @@ class BasePlugin:
         if levelBatt < 10:
             os.system("sudo shutdown")
         try:
-            Devices[Unit].Update(nValue=0, sValue=str(levelBatt), Image=Images[icon].ID)
+            Devices[Unit].Update(nValue=0, sValue=str(levelBatt), Image=Images[icon].ID, BatteryLevel = levelBatt)
         except:
             Domoticz.Error("Failed to update device unit " + str(Unit))
             Domoticz.Error("icon " + str(icon) + "levelBat" + str(levelBatt))
