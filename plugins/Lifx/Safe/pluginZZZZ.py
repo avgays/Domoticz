@@ -85,7 +85,7 @@ class BasePlugin:
             Domoticz.Debug("Devices " + str(self.mydevices))
             Domoticz.Debug("Devices " + str(k))
             for i in range(len(myResult)):
-                Domoticz.Debug("LIFX: " + str(myResult[i]["hsbk"]))
+                Domoticz.Debug("LIFX: " + str(myResult[i]))
                 myName = "Lamp"
                 myPower=1
                 myLevel=100
@@ -94,20 +94,26 @@ class BasePlugin:
                 mySType=devtypes[myModel][1] #mySType=73
                 mySwitchtype=devtypes[myModel][2] #7
                 myPower=10 if (myResult[i]["power"]) else 0
-                myLevel=str(int(myResult[i]["hsbk"][2]*100))
+                #myLevel=str(int(myResult[i]["hsbk"][2]*100))
+                h, s, b, k = myResult[0]["hsbk"]
+                myLevel=str(int(b*100))
+                red, green, blue = hsv_to_rgb(h, s, 1)
+                ColorStr='{"b":' + str(blue) + ',"cw":0,"g":' + str(green) + ',"m":3,"r":' + str(red) + ',"t":0,"ww":0}'
+                #Domoticz.Debug("ColorStr >>>> " + ColorStr)
                 MACADDR=str(myResult[i]["_lifx"]["addr"].replace(":",""))
                 myName = str(myResult[i]["label"])
                 #myName = str(myResult[i]["_model"])
+                
                 try:
                     Unit=int(self.inv_mydevices[MACADDR])
-                    UpdateDevice(Unit, myPower, myLevel)
+                    UpdateDevice(Unit, myPower, myLevel, ColorStr)
                     Domoticz.Debug("Devices exist. " + str(Unit))
                 except Exception:
                     k+=1
                     Domoticz.Device(Name=myName,  Unit=(k), Type=myType, Subtype=mySType, Switchtype=mySwitchtype).Create()
                     self.mydevices[str(k)]=MACADDR
                     Domoticz.Debug("Devices created. " + str(k))    
-                    UpdateDevice(k, myPower, myLevel)
+                    UpdateDevice(k, myPower, myLevel, ColorStr)
             with open(confFile, 'w') as outfile:
                 json.dump(self.mydevices, outfile)
         self.inv_mydevices = {v: k for k, v in self.mydevices.items()}
@@ -125,43 +131,48 @@ class BasePlugin:
 
     def onCommand(self, Unit, Command, Level, Color):
         MACADDR=self.mydevices[str(Unit)]
-        Domoticz.Debug("onCommand called for Lifx #" + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level) + ", Color: " + str(Color))
+        Domoticz.Debug("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level) + ", Color: " + str(Color))
+        
         if (Command == 'On'):
             setLIFX("power_on", [MACADDR])
-            UpdateDevice(Unit, 10, Devices[Unit].sValue)
+            UpdateDevice(Unit, 10, Devices[Unit].sValue, "")
         elif (Command == 'Off'):
             setLIFX("power_off", [MACADDR])
-            UpdateDevice(Unit, 0, Devices[Unit].sValue)
+            UpdateDevice(Unit, 0, Devices[Unit].sValue, "")
         elif (Command == 'Set Level'):
             myResult = queryLIFX(Params=MACADDR)
             h, s, b, k = myResult[0]["hsbk"]
             b=Level/100
             setLIFX("set_light_from_hsbk", [MACADDR, h,s,b,k,0])
-            UpdateDevice(Unit, 15, str(Level))
+            setLIFX("power_on", [MACADDR])
+            UpdateDevice(Unit, 2, str(Level), "")
         elif (Command == 'Set Color'):
             myResult = queryLIFX(Params=MACADDR)
             h, s, b, k = myResult[0]["hsbk"]
             ColorJ=json.loads(Color)
-            Domoticz.Debug("Get Color HSB Lifx #" + str(Unit) + ">>"  + str(h) + ":"+ str(s) + ":"+ str(b)+ ":"+ str(k))
+            Domoticz.Debug("Get Color HSB: "  + str(h) + ":"+ str(s) + ":"+ str(b)+ ":"+ str(k))
             red=ColorJ["r"]/255
             green=ColorJ["g"]/255
             blue=ColorJ["b"]/255
             mmode=ColorJ["m"]
             t=ColorJ["t"]
-            v=0
             if (mmode==2): # set temp
                 h=0
                 s=0
-                v=Level/100
-                k=translate(t,255,0,2500,9000)
+                k=translate(t,0,255,2500,9000)
             elif (mmode==3): # set color
                 h, s, v = rgb_to_hsv(red, green, blue)
-            setLIFX("set_light_from_hsbk", [MACADDR, h,s,b,k,0])
-            setLIFX("power_on", [MACADDR])
-            UpdateDevice(Unit, 10, Devices[Unit].sValue)
-            UpdateDevice2(Unit, 15, str(Level), str(Color))          
-            Domoticz.Debug("Set Color RGB Lifx #" + str(Unit) + ">>" + str(red) + ":"+ str(green) + ":"+ str(blue) + " mode:" + str(mmode)+ " temp:" + str(t))
-            Domoticz.Debug("Set Color HSB Lifx #" + str(Unit) + ">>"  + str(h) + ":"+ str(s) + ":"+ str(v) + ":"+ str(k))
+                h *= 360
+            setLIFX("set_light_from_hsbk", [MACADDR, h,s,b,k])
+            #setLIFX("power_on", [MACADDR])
+            Domoticz.Debug(">>>>>>>>>>>>Start UpdateDevice")
+            UpdateDevice(Unit, 10, Level, str(Color))
+            Domoticz.Debug(">>>>>>>>>>>>End UpdateDevice")
+            Domoticz.Debug("Set Color RGB: " + str(red) + ":"+ str(green) + ":"+ str(blue) + " mode:" + str(mmode)+ " temp:" + str(t))
+            Domoticz.Debug("Set Color HSB: "  + str(h) + ":"+ str(s) + ":"+ str(v))
+            #myResult = queryLIFX(Params=MACADDR)
+            #h, s, b, k = myResult[0]["hsbk"]
+            #Domoticz.Debug("Get Color HSB New: "  + str(h) + ":"+ str(s) + ":"+ str(b)+ ":"+ str(k))
     def onNotification(self, Data):
         Domoticz.Debug("onNotification: " + str(Data))
 
@@ -170,30 +181,25 @@ class BasePlugin:
 
     def onHeartbeat(self):
         if(self.HBpass==0):
-            myResult = queryLIFX()
-            ColorStr='';
-            for i in range(len(myResult)):
+             myResult = queryLIFX()
+             for i in range(len(myResult)):
                 MACADDR=str(myResult[i]["_lifx"]["addr"].replace(":",""))
                 myPower=10 if (myResult[i]["power"]) else 0
-                h, s, b, k = myResult[i]["hsbk"]
+                #myLevel=str(int(myResult[i]["hsbk"][2]*100))
+                h, s, b, k = myResult[0]["hsbk"]
                 myLevel=str(int(b*100))
-                if (s==0):
-                    t = translate(k,2500,9000,255,0)
-                    ColorStr='{"m":2,"r":0,"g":0,"b":0,"t":'+ str(t) +',"ww":0,"cw":0}'
-                else:
-                    red, green, blue = hsv_to_rgb(h, s, 1)
-                    ColorStr='{"m":3,"r":' + str(red) + ',"g":' + str(green) + ',"b":' + str(blue) + ',"t":0,"cw":0,"ww":0}'
+                red, green, blue = hsv_to_rgb(h, s, 1)
+                ColorStr='{"b":' + str(blue) + ',"cw":0,"g":' + str(green) + ',"m":3,"r":' + str(red) + ',"t":0,"ww":0}'
+                
                 try:
-                    myDevice=int(self.inv_mydevices[MACADDR])
-                    UpdateDevice2(myDevice, myPower, myLevel, ColorStr)
-                    Domoticz.Debug(">>Lifx #" + str(myDevice) + " ColorStr " + ColorStr)
-                    Domoticz.Debug(">>Lifx #" + str(myDevice) + " power " + str(myPower) + " Level " + str(myLevel))
-                    Domoticz.Debug(">>Lifx #" + str(myDevice) + " hsbk " + str(myResult[i]["hsbk"]))
+                     myDevice=int(self.inv_mydevices[MACADDR])
+                     UpdateDevice(myDevice, myPower, myLevel, ColorStr)
+                     Domoticz.Debug("Lifx #" + str(myDevice) + " power " + str(myPower) + " Level " + str(myLevel))
                 except KeyError:
-                    Domoticz.Debug("Unknown LIFX device found")
-            self.HBpass=4
+                     Domoticz.Debug("Unknown LIFX device found")
+             self.HBpass=4
         else:
-            self.HBpass-=1
+             self.HBpass-=1
 
 global _plugin
 _plugin = BasePlugin()
@@ -245,20 +251,12 @@ def DumpConfigToLog():
         Domoticz.Debug("Device LastLevel: " + str(Devices[x].LastLevel))
     return
 
-def UpdateDevice(Unit, nValue, sValue):
+def UpdateDevice(Unit, nValue, sValue, Color):
     # Make sure that the Domoticz device still exists (they can be deleted) before updating it 
     if (Unit in Devices):
-        if (Devices[Unit].nValue != nValue) or (Devices[Unit].sValue != sValue):
-            Devices[Unit].Update(nValue, str(sValue))
-            Domoticz.Debug("Update "+str(nValue)+":'"+str(sValue)+"' ("+Devices[Unit].Name+")")
-    return
-
-def UpdateDevice2(Unit, nValue, sValue, Color):
-    # Make sure that the Domoticz device still exists (they can be deleted) before updating it 
-    if (Unit in Devices):
-        Domoticz.Debug (">>>>>>>>>>Color: " + "' ("+Devices[Unit].Name+") " + Devices[Unit].Color)
         if (Devices[Unit].nValue != nValue) or (Devices[Unit].sValue != sValue):
             Devices[Unit].Update(nValue=nValue, sValue=str(sValue), Color=Color)
+
             Domoticz.Debug("LIFX Update "+str(nValue)+":'"+str(sValue)+"' ("+Devices[Unit].Name+")" + " Color " + Color)
     return
 
@@ -292,24 +290,37 @@ def rgb_to_hsv(r, g, b):
     high = max(r, g, b)
     low = min(r, g, b)
     h, s, v = high, high, high
+
     d = high - low
     s = 0 if high == 0 else d/high
+
     if high == low:
         h = 0.0
     else:
-        h = {r: (g - b) / d + (6 if g < b else 0), g: (b - r) / d + 2, b: (r - g) / d + 4,}[high]
+        h = {
+            r: (g - b) / d + (6 if g < b else 0),
+            g: (b - r) / d + 2,
+            b: (r - g) / d + 4,
+        }[high]
         h /= 6
-    h = int (h*360)
+
     return h, s, v
 
 def hsv_to_rgb(h, s, v):
-    h /= 360
     i = math.floor(h*6)
     f = h*6 - i
     p = v * (1-s)
     q = v * (1-f*s)
     t = v * (1-(1-f)*s)
-    r, g, b = [(v, t, p),(q, v, p),(p, v, t),(p, q, v),(t, p, v),(v, p, q),][int(i%6)]
+
+    r, g, b = [
+        (v, t, p),
+        (q, v, p),
+        (p, v, t),
+        (p, q, v),
+        (t, p, v),
+        (v, p, q),
+    ][int(i%6)]
     r *=255
     g *=255
     b *=255

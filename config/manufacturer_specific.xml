@@ -1,0 +1,3 @@
+﻿	<Manufacturer id="0060" name="Everspring">
+		<Product type="0002" id="0003" name="SM810 Door/Window Sensor" config="everspring/sm810.xml"/>
+	</Manufacturer>
