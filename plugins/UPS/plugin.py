@@ -192,7 +192,7 @@ class BasePlugin:
     
     def readCapacity(self):
         if (self.isPico):
-            capacity = ((self.voltage-3.5)/0.8)*100
+            capacity = round(((self.voltage-3.5)/0.8)*100)
         else :
             read = self.bus.read_word_data(self.address, 4)
             swapped = struct.unpack("<H", struct.pack(">H", read))[0]
