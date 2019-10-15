@@ -163,9 +163,10 @@ class BasePlugin:
         Devices[2].Update(nValue=0, sValue=str(self.voltage), BatteryLevel = int(self.percent))
         if (self.isPico):
             self.rasVoltage = self.readRasVoltage()
-            Devices[3].Update(nValue=0, sValue=str(self.voltage))
+            Devices[3].Update(nValue=0, sValue=str(self.rasVoltage))
             self.temperature = self.readTemperature()
             Devices[4].Update(nValue=0, sValue=str(self.temperature))
+            #Domoticz.Log("Temperature {} C".format(str(self.temperature)))
     
     def readVoltage(self):
         if (self.isPico):
@@ -185,7 +186,7 @@ class BasePlugin:
         return voltage
     
     def readTemperature(self):
-        temperature = self.bus.read_word_data(self.address, 0x1b)
+        temperature = self.bus.read_byte_data(self.address, 0x1b)
         temperature = format(temperature,"02x")
         return temperature
     
