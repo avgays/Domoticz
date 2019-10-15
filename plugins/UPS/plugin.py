@@ -83,6 +83,7 @@ class BasePlugin:
         self.isPower = 2
         self.isCharge = 0
         self.shutdown = False
+        self.temperature = 0
         return
 
     def onStart(self):
@@ -141,6 +142,7 @@ class BasePlugin:
             Domoticz.Device(Name="UPSVolts", Unit=2, TypeName="Voltage").Create()
             if (self.isPico):
                 Domoticz.Device(Name="RasVolts", Unit=3, TypeName="Voltage").Create()
+                Domoticz.Device(Name="PicoTemperature", Unit=4, TypeName="Temperature").Create()
 
     def onStop(self):
         Domoticz.Debug("onStop called")
@@ -162,6 +164,8 @@ class BasePlugin:
         if (self.isPico):
             self.rasVoltage = self.readRasVoltage()
             Devices[3].Update(nValue=0, sValue=str(self.voltage))
+            self.temperature = self.readTemperature()
+            Devices[4].Update(nValue=0, sValue=str(self.temperature))
     
     def readVoltage(self):
         if (self.isPico):
@@ -180,9 +184,14 @@ class BasePlugin:
         voltage = (float(data) / 100) 
         return voltage
     
+    def readTemperature(self):
+        temperature = self.bus.read_word_data(self.address, 0x1b)
+        temperature = format(temperature,"02x")
+        return temperature
+    
     def readCapacity(self):
         if (self.isPico):
-            capacity=100
+            capacity = ((self.voltage-3.5)/0.8)*100
         else :
             read = self.bus.read_word_data(self.address, 4)
             swapped = struct.unpack("<H", struct.pack(">H", read))[0]
